@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Mechanical Keyboard Tester</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        }
+      }
+    };
+  </script>
+  <style>
+    /* Custom Keycap Styling & Physical Key Press Animations */
+    :root {
+      --key-bg: #ffffff;
+      --key-border: #cbd5e1;
+      --key-shadow: #94a3b8;
+      --key-text: #1e293b;
+      --key-subtext: #64748b;
+      --key-tested-bg: #ecfdf5;
+      --key-tested-border: #10b981;
+      --key-tested-shadow: #059669;
+      --key-tested-text: #065f46;
+      --key-active-bg: #fef3c7;
+      --key-active-border: #f59e0b;
+      --key-active-text: #92400e;
+    }
+
+    html.dark {
+      --key-bg: #1e293b;
+      --key-border: #334155;
+      --key-shadow: #0f172a;
+      --key-text: #e2e8f0;
+      --key-subtext: #94a3b8;
+      --key-tested-bg: rgba(16, 185, 129, 0.16);
+      --key-tested-border: #10b981;
+      --key-tested-shadow: #065f46;
+      --key-tested-text: #6ee7b7;
+      --key-active-bg: rgba(245, 158, 11, 0.28);
+      --key-active-border: #fbbf24;
+      --key-active-text: #fde68a;
+    }
+
+    .keycap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      background-color: var(--key-bg);
+      color: var(--key-text);
+      border: 1px solid var(--key-border);
+      box-shadow: 0 3px 0 0 var(--key-shadow);
+      border-radius: 0.45rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      font-weight: 600;
+      line-height: 1.1;
+      user-select: none;
+      cursor: pointer;
+      transition: transform 0.05s ease, box-shadow 0.05s ease, background-color 0.12s ease, border-color 0.12s ease;
+      height: 2.65rem;
+      padding: 0.2rem 0.3rem;
+      text-align: center;
+    }
+
+    .keycap .sub {
+      font-size: 0.6rem;
+      font-weight: 400;
+      color: var(--key-subtext);
+      margin-bottom: 1px;
+    }
+
+    /* Tested / Released State */
+    .keycap.tested {
+      background-color: var(--key-tested-bg);
+      border-color: var(--key-tested-border);
+      box-shadow: 0 3px 0 0 var(--key-tested-shadow);
+      color: var(--key-tested-text);
+    }
+
+    .keycap.tested .sub {
+      color: var(--key-tested-text);
+      opacity: 0.85;
+    }
+
+    /* Actively Pressed State */
+    .keycap.active {
+      background-color: var(--key-active-bg) !important;
+      border-color: var(--key-active-border) !important;
+      color: var(--key-active-text) !important;
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 0 var(--key-active-border), 0 0 14px rgba(245, 158, 11, 0.45) !important;
+    }
+
+    .keycap.active .sub {
+      color: var(--key-active-text) !important;
+    }
+
+    /* Full 104-Key Keyboard Grid Architecture */
+    .keyboard-chassis {
+      display: grid;
+      grid-template-columns: 15fr 3fr 4fr;
+      gap: 1rem;
+      min-width: 960px;
+    }
+
+    .kb-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .kb-row {
+      display: grid;
+      gap: 0.35rem;
+      width: 100%;
+    }
+
+    /* Custom Scrollbar for horizontal scrolling on small mobile viewports */
+    .kb-scroll-container::-webkit-scrollbar {
+      height: 8px;
+    }
+    .kb-scroll-container::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .kb-scroll-container::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200 flex flex-col">
+
+  <!-- Top Header & Controls Bar -->
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect>
+            <path d="M6 8h.001"></path><path d="M10 8h.001"></path><path d="M14 8h.001"></path><path d="M18 8h.001"></path>
+            <path d="M8 12h.001"></path><path d="M12 12h.001"></path><path d="M16 12h.001"></path>
+            <path d="M7 16h10"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight leading-none">KeySwitch<span class="text-emerald-500">Lab</span></h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">104+ Key Hardware & Scan-Code Diagnostics</p>
+        </div>
+      </div>
+
+      <!-- Interactive Control Cluster -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <!-- Layout Switcher -->
+        <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+          <label for="layoutSelect" class="sr-only">Keyboard Layout</label>
+          <select id="layoutSelect" class="bg-transparent text-xs font-semibold px-2.5 py-1.5 rounded-lg focus:outline-none cursor-pointer text-slate-700 dark:text-slate-200">
+            <option value="qwerty" class="dark:bg-slate-800">Layout: QWERTY</option>
+            <option value="dvorak" class="dark:bg-slate-800">Layout: Dvorak</option>
+          </select>
+        </div>
+
+        <!-- Extended Function Keys Toggle (F13-F24) -->
+        <button id="toggleFnExt" type="button" class="px-3 py-2 rounded-xl text-xs font-semibold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/70 transition flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-slate-400" id="fnExtIndicator"></span>
+          F13–F24
+        </button>
+
+        <!-- Synthesized Sound Toggle -->
+        <div class="flex items-center bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <button id="soundToggle" type="button" class="px-3 py-2 text-xs font-semibold flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-700/70 transition text-emerald-600 dark:text-emerald-400" title="Toggle Mechanical Click Audio">
+            <svg id="soundIconOn" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+            <svg id="soundIconOff" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+            <span id="soundLabel">Clicky</span>
+          </button>
+          <select id="switchTypeSelect" aria-label="Switch Sound Profile" class="bg-slate-50 dark:bg-slate-900/60 border-l border-slate-200 dark:border-slate-700 text-xs font-medium px-2 py-2 focus:outline-none cursor-pointer text-slate-600 dark:text-slate-300">
+            <option value="blue" class="dark:bg-slate-800">Blue (Clicky)</option>
+            <option value="brown" class="dark:bg-slate-800">Brown (Tactile)</option>
+            <option value="red" class="dark:bg-slate-800">Red (Linear)</option>
+          </select>
+        </div>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggle" type="button" aria-label="Toggle Dark/Light Theme" class="p-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/70 transition text-slate-600 dark:text-slate-300">
+          <!-- Sun Icon (shown in dark mode) -->
+          <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          <!-- Moon Icon (shown in light mode) -->
+          <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+
+        <!-- Reset Button -->
+        <button id="resetBtn" type="button" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-rose-500 hover:bg-rose-600 active:scale-95 text-white shadow-sm transition flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
+          Reset
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col gap-5">
+
+    <!-- Telemetry & Live Event Inspector Row -->
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- Live Event Inspector Card -->
+      <div class="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between gap-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Live Key Event Inspector</span>
+          <span id="eventStateBadge" class="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">IDLE — PRESS ANY KEY</span>
+        </div>
+
+        <div class="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+          <div class="bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400 font-medium">event.key</div>
+            <div id="inspKey" class="font-mono text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 truncate mt-0.5">—</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400 font-medium">event.code</div>
+            <div id="inspCode" class="font-mono text-sm sm:text-base font-bold text-amber-600 dark:text-amber-400 truncate mt-0.5">—</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400 font-medium">keyCode (which)</div>
+            <div id="inspKeyCode" class="font-mono text-sm sm:text-base font-bold text-sky-600 dark:text-sky-400 truncate mt-0.5">—</div>
+          </div>
+          <div class="col-span-3 sm:col-span-1 bg-slate-50 dark:bg-slate-950/70 border border-slate-200/80 dark:border-slate-800 rounded-xl p-2.5">
+            <div class="text-[11px] text-slate-400 font-medium">Location</div>
+            <div id="inspLocation" class="font-mono text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 truncate mt-1">—</div>
+          </div>
+        </div>
+
+        <!-- Recent Key History Tape -->
+        <div class="flex items-center gap-2 pt-1 overflow-hidden">
+          <span class="text-[11px] font-medium text-slate-400 shrink-0">History:</span>
+          <div id="keyHistoryTape" class="flex items-center gap-1.5 overflow-x-auto text-xs font-mono py-0.5">
+            <span class="text-slate-400 dark:text-slate-600 italic text-[11px]">Keystrokes will appear here...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Counter & Text Capture Box -->
+      <div class="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex flex-col justify-between gap-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Tested Keys</span>
+            <span class="px-2.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold">
+              <span id="testedCount">0</span> / <span id="totalCount">104</span>
+            </span>
+          </div>
+
+          <!-- Legend -->
+          <div class="flex items-center gap-3 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm border border-slate-400 bg-white dark:bg-slate-800 inline-block"></span>Untested</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm border border-amber-400 bg-amber-400/30 inline-block"></span>Active</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-sm border border-emerald-500 bg-emerald-500/30 inline-block"></span>Tested</span>
+          </div>
+        </div>
+
+        <div class="relative flex-1 flex flex-col">
+          <label for="captureBox" class="sr-only">Text Capture Scratchpad</label>
+          <textarea id="captureBox" rows="2" placeholder="Type here to test text output (global key detection works anywhere on the page)..." class="w-full flex-1 resize-none rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 px-3 py-2 font-mono text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"></textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- Full-Size Visual Keyboard Enclosure -->
+    <section class="bg-slate-200/70 dark:bg-slate-900 border border-slate-300/80 dark:border-slate-800 rounded-2xl p-4 sm:p-6 shadow-md">
+      <div class="kb-scroll-container overflow-x-auto pb-2">
+        <div id="keyboardContainer" class="keyboard-chassis mx-auto">
+          <!-- Rendered dynamically via JavaScript for clean QWERTY / Dvorak & F13-F24 support -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Helpful Hardware Testing Tips -->
+    <footer class="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-4 text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-1.5">
+        <span><strong class="text-slate-700 dark:text-slate-300">Left vs. Right Modifiers:</strong> Uses <code class="font-mono text-emerald-600 dark:text-emerald-400">event.code</code> to independently verify <code class="font-mono">ShiftLeft</code> / <code class="font-mono">ShiftRight</code>, <code class="font-mono">ControlLeft</code> / <code class="font-mono">ControlRight</code>, and <code class="font-mono">AltLeft</code> / <code class="font-mono">AltRight</code>.</span>
+        <span><strong class="text-slate-700 dark:text-slate-300">Numpad:</strong> Toggle <code class="font-mono">NumLock</code> ON to verify numeric keypad digits separately from top-row digits.</span>
+      </div>
+      <div class="text-[11px] text-slate-400">
+        Tip: Click any on-screen key to preview its switch sound.
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    /**
+     * Web Audio API Mechanical Switch Synthesizer
+     * Generates realistic mechanical switch acoustics (Blue Clicky, Brown Tactile, Red Linear)
+     * without requiring any external MP3 or WAV assets.
+     */
+    class MechanicalAudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.profile = 'blue'; // 'blue' | 'brown' | 'red'
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) {
+            this.ctx = new AudioCtx();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playPress(isModifier = false) {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        // Slight pitch randomization so rapid typing feels organic
+        const jitter = (Math.random() - 0.5) * 140;
+
+        // 1. Keycap bottom-out thock (low-mid sine/triangle transient)
+        const thockOsc = this.ctx.createOscillator();
+        const thockGain = this.ctx.createGain();
+        thockOsc.type = 'triangle';
+        const baseFreq = isModifier ? 135 : 175;
+        thockOsc.frequency.setValueAtTime(baseFreq + jitter * 0.15, now);
+        thockOsc.frequency.exponentialRampToValueAtTime(48, now + 0.045);
+
+        const thockVol = this.profile === 'red' ? 0.22 : 0.18;
+        thockGain.gain.setValueAtTime(thockVol, now);
+        thockGain.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
+
+        thockOsc.connect(thockGain);
+        thockGain.connect(this.ctx.destination);
+        thockOsc.start(now);
+        thockOsc.stop(now + 0.05);
+
+        // 2. Click jacket / tactile bump transient (filtered noise burst)
+        if (this.profile === 'blue' || this.profile === 'brown') {
+          const bufferSize = Math.floor(this.ctx.sampleRate * 0.018);
+          const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.28));
+          }
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = noiseBuffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(
+            (this.profile === 'blue' ? 2400 : 1250) + jitter,
+            now
+          );
+          filter.Q.setValueAtTime(this.profile === 'blue' ? 3.2 : 1.8, now);
+
+          const clickGain = this.ctx.createGain();
+          const clickVol = this.profile === 'blue' ? 0.35 : 0.15;
+          clickGain.gain.setValueAtTime(clickVol, now);
+          clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.018);
+
+          noise.connect(filter);
+          filter.connect(clickGain);
+          clickGain.connect(this.ctx.destination);
+          noise.start(now);
+        }
+      }
+
+      playRelease() {
+        if (!this.enabled) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime;
+        const upOsc = this.ctx.createOscillator();
+        const upGain = this.ctx.createGain();
+        upOsc.type = 'sine';
+        upOsc.frequency.setValueAtTime(240 + Math.random() * 40, now);
+        upOsc.frequency.exponentialRampToValueAtTime(90, now + 0.025);
+
+        upGain.gain.setValueAtTime(0.07, now);
+        upGain.gain.exponentialRampToValueAtTime(0.001, now + 0.026);
+
+        upOsc.connect(upGain);
+        upGain.connect(this.ctx.destination);
+        upOsc.start(now);
+        upOsc.stop(now + 0.028);
+      }
+    }
+
+    /**
+     * Full 104-Key + Extended F13-F24 Keyboard Definitions
+     * Uses standard W3C KeyboardEvent.code values for exact physical key mapping.
+     */
+    const KEYBOARD_DATA = {
+      fnRow: [
+        { code: 'Escape', label: 'Esc', w: 1.2 },
+        { spacer: 0.6 },
+        { code: 'F1', label: 'F1', w: 1 },
+        { code: 'F2', label: 'F2', w: 1 },
+        { code: 'F3', label: 'F3', w: 1 },
+        { code: 'F4', label: 'F4', w: 1 },
+        { spacer: 0.4 },
+        { code: 'F5', label: 'F5', w: 1 },
+        { code: 'F6', label: 'F6', w: 1 },
+        { code: 'F7', label: 'F7', w: 1 },
+        { code: 'F8', label: 'F8', w: 1 },
+        { spacer: 0.4 },
+        { code: 'F9', label: 'F9', w: 1 },
+        { code: 'F10', label: 'F10', w: 1 },
+        { code: 'F11', label: 'F11', w: 1 },
+        { code: 'F12', label: 'F12', w: 1 },
+      ],
+      fnExtRow: [
+        { code: 'F13', label: 'F13', w: 1 },
+        { code: 'F14', label: 'F14', w: 1 },
+        { code: 'F15', label: 'F15', w: 1 },
+        { code: 'F16', label: 'F16', w: 1 },
+        { code: 'F17', label: 'F17', w: 1 },
+        { code: 'F18', label: 'F18', w: 1 },
+        { code: 'F19', label: 'F19', w: 1 },
+        { code: 'F20', label: 'F20', w: 1 },
+        { code: 'F21', label: 'F21', w: 1 },
+        { code: 'F22', label: 'F22', w: 1 },
+        { code: 'F23', label: 'F23', w: 1 },
+        { code: 'F24', label: 'F24', w: 1 },
+      ],
+      qwertyRows: [
+        [
+          { code: 'Backquote', label: '`', sub: '~', w: 1 },
+          { code: 'Digit1', label: '1', sub: '!', w: 1 },
+          { code: 'Digit2', label: '2', sub: '@', w: 1 },
+          { code: 'Digit3', label: '3', sub: '#', w: 1 },
+          { code: 'Digit4', label: '4', sub: '$', w: 1 },
+          { code: 'Digit5', label: '5', sub: '%', w: 1 },
+          { code: 'Digit6', label: '6', sub: '^', w: 1 },
+          { code: 'Digit7', label: '7', sub: '&', w: 1 },
+          { code: 'Digit8', label: '8', sub: '*', w: 1 },
+          { code: 'Digit9', label: '9', sub: '(', w: 1 },
+          { code: 'Digit0', label: '0', sub: ')', w: 1 },
+          { code: 'Minus', label: '-', sub: '_', w: 1 },
+          { code: 'Equal', label: '=', sub: '+', w: 1 },
+          { code: 'Backspace', label: 'Backspace', w: 2 },
+        ],
+        [
+          { code: 'Tab', label: 'Tab', w: 1.5 },
+          { code: 'KeyQ', label: 'Q', w: 1 },
+          { code: 'KeyW', label: 'W', w: 1 },
+          { code: 'KeyE', label: 'E', w: 1 },
+          { code: 'KeyR', label: 'R', w: 1 },
+          { code: 'KeyT', label: 'T', w: 1 },
+          { code: 'KeyY', label: 'Y', w: 1 },
+          { code: 'KeyU', label: 'U', w: 1 },
+          { code: 'KeyI', label: 'I', w: 1 },
+          { code: 'KeyO', label: 'O', w: 1 },
+          { code: 'KeyP', label: 'P', w: 1 },
+          { code: 'BracketLeft', label: '[', sub: '{', w: 1 },
+          { code: 'BracketRight', label: ']', sub: '}', w: 1 },
+          { code: 'Backslash', label: '\\', sub: '|', w: 1.5 },
+        ],
+        [
+          { code: 'CapsLock', label: 'Caps Lock', w: 1.8 },
+          { code: 'KeyA', label: 'A', w: 1 },
+          { code: 'KeyS', label: 'S', w: 1 },
+          { code: 'KeyD', label: 'D', w: 1 },
+          { code: 'KeyF', label: 'F', w: 1 },
+          { code: 'KeyG', label: 'G', w: 1 },
+          { code: 'KeyH', label: 'H', w: 1 },
+          { code: 'KeyJ', label: 'J', w: 1 },
+          { code: 'KeyK', label: 'K', w: 1 },
+          { code: 'KeyL', label: 'L', w: 1 },
+          { code: 'Semicolon', label: ';', sub: ':', w: 1 },
+          { code: 'Quote', label: "'", sub: '"', w: 1 },
+          { code: 'Enter', label: 'Enter', w: 2.2 },
+        ],
+        [
+          { code: 'ShiftLeft', label: 'Shift', sub: 'Left', w: 2.3 },
+          { code: 'KeyZ', label: 'Z', w: 1 },
+          { code: 'KeyX', label: 'X', w: 1 },
+          { code: 'KeyC', label: 'C', w: 1 },
+          { code: 'KeyV', label: 'V', w: 1 },
+          { code: 'KeyB', label: 'B', w: 1 },
+          { code: 'KeyN', label: 'N', w: 1 },
+          { code: 'KeyM', label: 'M', w: 1 },
+          { code: 'Comma', label: ',', sub: '<', w: 1 },
+          { code: 'Period', label: '.', sub: '>', w: 1 },
+          { code: 'Slash', label: '/', sub: '?', w: 1 },
+          { code: 'ShiftRight', label: 'Shift', sub: 'Right', w: 2.7 },
+        ],
+        [
+          { code: 'ControlLeft', label: 'Ctrl', sub: 'L', w: 1.3 },
+          { code: 'MetaLeft', label: 'Win', sub: 'L', w: 1.2 },
+          { code: 'AltLeft', label: 'Alt', sub: 'L', w: 1.2 },
+          { code: 'Space', label: 'Space', w: 6.4 },
+          { code: 'AltRight', label: 'Alt', sub: 'R', w: 1.2 },
+          { code: 'MetaRight', label: 'Win', sub: 'R', w: 1.2 },
+          { code: 'ContextMenu', label: 'Menu', w: 1.2 },
+          { code: 'ControlRight', label: 'Ctrl', sub: 'R', w: 1.3 },
+        ]
+      ],
+      dvorakRows: [
+        [
+          { code: 'Backquote', label: '`', sub: '~', w: 1 },
+          { code: 'Digit1', label: '1', sub: '!', w: 1 },
+          { code: 'Digit2', label: '2', sub: '@', w: 1 },
+          { code: 'Digit3', label: '3', sub: '#', w: 1 },
+          { code: 'Digit4', label: '4', sub: '$', w: 1 },
+          { code: 'Digit5', label: '5', sub: '%', w: 1 },
+          { code: 'Digit6', label: '6', sub: '^', w: 1 },
+          { code: 'Digit7', label: '7', sub: '&', w: 1 },
+          { code: 'Digit8', label: '8', sub: '*', w: 1 },
+          { code: 'Digit9', label: '9', sub: '(', w: 1 },
+          { code: 'Digit0', label: '0', sub: ')', w: 1 },
+          { code: 'BracketLeft', label: '[', sub: '{', w: 1 },
+          { code: 'BracketRight', label: ']', sub: '}', w: 1 },
+          { code: 'Backspace', label: 'Backspace', w: 2 },
+        ],
+        [
+          { code: 'Tab', label: 'Tab', w: 1.5 },
+          { code: 'Quote', label: "'", sub: '"', w: 1 },
+          { code: 'Comma', label: ',', sub: '<', w: 1 },
+          { code: 'Period', label: '.', sub: '>', w: 1 },
+          { code: 'KeyP', label: 'P', w: 1 },
+          { code: 'KeyY', label: 'Y', w: 1 },
+          { code: 'KeyF', label: 'F', w: 1 },
+          { code: 'KeyG', label: 'G', w: 1 },
+          { code: 'KeyC', label: 'C', w: 1 },
+          { code: 'KeyR', label: 'R', w: 1 },
+          { code: 'KeyL', label: 'L', w: 1 },
+          { code: 'Slash', label: '/', sub: '?', w: 1 },
+          { code: 'Equal', label: '=', sub: '+', w: 1 },
+          { code: 'Backslash', label: '\\', sub: '|', w: 1.5 },
+        ],
+        [
+          { code: 'CapsLock', label: 'Caps Lock', w: 1.8 },
+          { code: 'KeyA', label: 'A', w: 1 },
+          { code: 'KeyO', label: 'O', w: 1 },
+          { code: 'KeyE', label: 'E', w: 1 },
+          { code: 'KeyU', label: 'U', w: 1 },
+          { code: 'KeyI', label: 'I', w: 1 },
+          { code: 'KeyD', label: 'D', w: 1 },
+          { code: 'KeyH', label: 'H', w: 1 },
+          { code: 'KeyT', label: 'T', w: 1 },
+          { code: 'KeyN', label: 'N', w: 1 },
+          { code: 'KeyS', label: 'S', w: 1 },
+          { code: 'Minus', label: '-', sub: '_', w: 1 },
+          { code: 'Enter', label: 'Enter', w: 2.2 },
+        ],
+        [
+          { code: 'ShiftLeft', label: 'Shift', sub: 'Left', w: 2.3 },
+          { code: 'Semicolon', label: ';', sub: ':', w: 1 },
+          { code: 'KeyQ', label: 'Q', w: 1 },
+          { code: 'KeyJ', label: 'J', w: 1 },
+          { code: 'KeyK', label: 'K', w: 1 },
+          { code: 'KeyX', label: 'X', w: 1 },
+          { code: 'KeyB', label: 'B', w: 1 },
+          { code: 'KeyM', label: 'M', w: 1 },
+          { code: 'KeyW', label: 'W', w: 1 },
+          { code: 'KeyV', label: 'V', w: 1 },
+          { code: 'KeyZ', label: 'Z', w: 1 },
+          { code: 'ShiftRight', label: 'Shift', sub: 'Right', w: 2.7 },
+        ],
+        [
+          { code: 'ControlLeft', label: 'Ctrl', sub: 'L', w: 1.3 },
+          { code: 'MetaLeft', label: 'Win', sub: 'L', w: 1.2 },
+          { code: 'AltLeft', label: 'Alt', sub: 'L', w: 1.2 },
+          { code: 'Space', label: 'Space', w: 6.4 },
+          { code: 'AltRight', label: 'Alt', sub: 'R', w: 1.2 },
+          { code: 'MetaRight', label: 'Win', sub: 'R', w: 1.2 },
+          { code: 'ContextMenu', label: 'Menu', w: 1.2 },
+          { code: 'ControlRight', label: 'Ctrl', sub: 'R', w: 1.3 },
+        ]
+      ],
+      navCluster: {
+        top: [
+          { code: 'PrintScreen', label: 'PrtSc', w: 1 },
+          { code: 'ScrollLock', label: 'ScrLk', w: 1 },
+          { code: 'Pause', label: 'Pause', w: 1 },
+        ],
+        mid1: [
+          { code: 'Insert', label: 'Ins', w: 1 },
+          { code: 'Home', label: 'Home', w: 1 },
+          { code: 'PageUp', label: 'PgUp', w: 1 },
+        ],
+        mid2: [
+          { code: 'Delete', label: 'Del', w: 1 },
+          { code: 'End', label: 'End', w: 1 },
+          { code: 'PageDown', label: 'PgDn', w: 1 },
+        ],
+        arrowsTop: [
+          { spacer: 1 },
+          { code: 'ArrowUp', label: '↑', w: 1 },
+          { spacer: 1 },
+        ],
+        arrowsBottom: [
+          { code: 'ArrowLeft', label: '←', w: 1 },
+          { code: 'ArrowDown', label: '↓', w: 1 },
+          { code: 'ArrowRight', label: '→', w: 1 },
+        ]
+      }
+    };
+
+    // Application State
+    const state = {
+      layout: 'qwerty',
+      showFnExt: false,
+      testedKeys: new Set(),
+      activeKeys: new Set(),
+      history: [],
+    };
+
+    const audio = new MechanicalAudioEngine();
+
+    // DOM References
+    const keyboardContainer = document.getElementById('keyboardContainer');
+    const layoutSelect = document.getElementById('layoutSelect');
+    const toggleFnExtBtn = document.getElementById('toggleFnExt');
+    const fnExtIndicator = document.getElementById('fnExtIndicator');
+    const soundToggleBtn = document.getElementById('soundToggle');
+    const soundIconOn = document.getElementById('soundIconOn');
+    const soundIconOff = document.getElementById('soundIconOff');
+    const soundLabel = document.getElementById('soundLabel');
+    const switchTypeSelect = document.getElementById('switchTypeSelect');
+    const themeToggleBtn = document.getElementById('themeToggle');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+    const resetBtn = document.getElementById('resetBtn');
+    const captureBox = document.getElementById('captureBox');
+
+    // Inspector DOM References
+    const inspKey = document.getElementById('inspKey');
+    const inspCode = document.getElementById('inspCode');
+    const inspKeyCode = document.getElementById('inspKeyCode');
+    const inspLocation = document.getElementById('inspLocation');
+    const eventStateBadge = document.getElementById('eventStateBadge');
+    const keyHistoryTape = document.getElementById('keyHistoryTape');
+    const testedCountEl = document.getElementById('testedCount');
+    const totalCountEl = document.getElementById('totalCount');
+
+    /**
+     * Helper to build a single row of keys using CSS Grid proportional column fractions
+     */
+    function createKeyRow(items) {
+      const row = document.createElement('div');
+      row.className = 'kb-row';
+      const templateCols = items.map(item => `${item.spacer || item.w || 1}fr`).join(' ');
+      row.style.gridTemplateColumns = templateCols;
+
+      items.forEach(item => {
+        if (item.spacer) {
+          const spacer = document.createElement('div');
+          row.appendChild(spacer);
+          return;
+        }
+
+        const keyEl = document.createElement('div');
+        keyEl.className = 'keycap';
+        keyEl.dataset.code = item.code;
+
+        if (state.testedKeys.has(item.code)) keyEl.classList.add('tested');
+        if (state.activeKeys.has(item.code)) keyEl.classList.add('active');
+
+        if (item.sub) {
+          keyEl.innerHTML = `<span class="sub">${escapeHtml(item.sub)}</span><span>${escapeHtml(item.label)}</span>`;
+        } else {
+          keyEl.textContent = item.label;
+        }
+
+        // Allow clicking keys on screen to simulate press & test audio
+        keyEl.addEventListener('mousedown', () => simulateVirtualPress(item.code, item.label));
+        keyEl.addEventListener('mouseup', () => simulateVirtualRelease(item.code));
+        keyEl.addEventListener('mouseleave', () => {
+          if (state.activeKeys.has(item.code)) simulateVirtualRelease(item.code);
+        });
+
+        row.appendChild(keyEl);
+      });
+
+      return row;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    /**
+     * Renders the complete 104-key (+ optional F13-F24) keyboard chassis
+     */
+    function renderKeyboard() {
+      keyboardContainer.innerHTML = '';
+
+      // 1. LEFT MAIN BLOCK (Function Keys + Alpha Block)
+      const mainSection = document.createElement('div');
+      mainSection.className = 'kb-section';
+
+      // F1 - F12 Row
+      mainSection.appendChild(createKeyRow(KEYBOARD_DATA.fnRow));
+
+      // Optional F13 - F24 Row
+      if (state.showFnExt) {
+        mainSection.appendChild(createKeyRow(KEYBOARD_DATA.fnExtRow));
+      }
+
+      // Spacer between F-row and main alphanumeric block
+      const fSpacer = document.createElement('div');
+      fSpacer.className = 'h-1.5';
+      mainSection.appendChild(fSpacer);
+
+      const alphaRows = state.layout === 'dvorak' ? KEYBOARD_DATA.dvorakRows : KEYBOARD_DATA.qwertyRows;
+      alphaRows.forEach(rowItems => {
+        mainSection.appendChild(createKeyRow(rowItems));
+      });
+
+      // 2. MIDDLE NAVIGATION & ARROW CLUSTER
+      const navSection = document.createElement('div');
+      navSection.className = 'kb-section justify-between';
+
+      const navTopGroup = document.createElement('div');
+      navTopGroup.className = 'flex flex-col gap-[0.4rem]';
+      navTopGroup.appendChild(createKeyRow(KEYBOARD_DATA.navCluster.top));
+
+      if (state.showFnExt) {
+        const extPlaceholder = document.createElement('div');
+        extPlaceholder.style.height = '2.65rem';
+        navTopGroup.appendChild(extPlaceholder);
+      }
+
+      const navSpacer = document.createElement('div');
+      navSpacer.className = 'h-1.5';
+      navTopGroup.appendChild(navSpacer);
+
+      navTopGroup.appendChild(createKeyRow(KEYBOARD_DATA.navCluster.mid1));
+      navTopGroup.appendChild(createKeyRow(KEYBOARD_DATA.navCluster.mid2));
+
+      const arrowGroup = document.createElement('div');
+      arrowGroup.className = 'flex flex-col gap-[0.4rem]';
+      arrowGroup.appendChild(createKeyRow(KEYBOARD_DATA.navCluster.arrowsTop));
+      arrowGroup.appendChild(createKeyRow(KEYBOARD_DATA.navCluster.arrowsBottom));
+
+      navSection.appendChild(navTopGroup);
+      navSection.appendChild(arrowGroup);
+
+      // 3. RIGHT NUMERIC KEYPAD (4x5 Grid with tall '+' and 'Enter' keys)
+      const numpadSection = document.createElement('div');
+      numpadSection.className = 'kb-section justify-end';
+
+      const numpadGrid = document.createElement('div');
+      numpadGrid.style.display = 'grid';
+      numpadGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+      numpadGrid.style.gridTemplateRows = 'repeat(5, 2.65rem)';
+      numpadGrid.style.gap = '0.35rem';
+
+      const numpadKeys = [
+        { code: 'NumLock', label: 'Num', sub: 'Lock' },
+        { code: 'NumpadDivide', label: '/' },
+        { code: 'NumpadMultiply', label: '*' },
+        { code: 'NumpadSubtract', label: '-' },
+
+        { code: 'Numpad7', label: '7', sub: 'Home' },
+        { code: 'Numpad8', label: '8', sub: '↑' },
+        { code: 'Numpad9', label: '9', sub: 'PgUp' },
+        { code: 'NumpadAdd', label: '+', rowSpan: 2 },
+
+        { code: 'Numpad4', label: '4', sub: '←' },
+        { code: 'Numpad5', label: '5' },
+        { code: 'Numpad6', label: '6', sub: '→' },
+
+        { code: 'Numpad1', label: '1', sub: 'End' },
+        { code: 'Numpad2', label: '2', sub: '↓' },
+        { code: 'Numpad3', label: '3', sub: 'PgDn' },
+        { code: 'NumpadEnter', label: 'Enter', rowSpan: 2 },
+
+        { code: 'Numpad0', label: '0', sub: 'Ins', colSpan: 2 },
+        { code: 'NumpadDecimal', label: '.', sub: 'Del' },
+      ];
+
+      numpadKeys.forEach(item => {
+        const keyEl = document.createElement('div');
+        keyEl.className = 'keycap';
+        keyEl.dataset.code = item.code;
+        keyEl.style.height = '100%';
+
+        if (item.colSpan) keyEl.style.gridColumn = `span ${item.colSpan}`;
+        if (item.rowSpan) keyEl.style.gridRow = `span ${item.rowSpan}`;
+
+        if (state.testedKeys.has(item.code)) keyEl.classList.add('tested');
+        if (state.activeKeys.has(item.code)) keyEl.classList.add('active');
+
+        if (item.sub) {
+          keyEl.innerHTML = `<span class="sub">${escapeHtml(item.sub)}</span><span>${escapeHtml(item.label)}</span>`;
+        } else {
+          keyEl.textContent = item.label;
+        }
+
+        keyEl.addEventListener('mousedown', () => simulateVirtualPress(item.code, item.label));
+        keyEl.addEventListener('mouseup', () => simulateVirtualRelease(item.code));
+        keyEl.addEventListener('mouseleave', () => {
+          if (state.activeKeys.has(item.code)) simulateVirtualRelease(item.code);
+        });
+
+        numpadGrid.appendChild(keyEl);
+      });
+
+      numpadSection.appendChild(numpadGrid);
+
+      // Assemble all 3 blocks
+      keyboardContainer.appendChild(mainSection);
+      keyboardContainer.appendChild(navSection);
+      keyboardContainer.appendChild(numpadSection);
+
+      updateCounters();
+    }
+
+    /**
+     * Updates key visual classes across the DOM for a given event.code
+     */
+    function syncKeyVisuals(code) {
+      const elements = keyboardContainer.querySelectorAll(`.keycap[data-code="${CSS.escape(code)}"]`);
+      elements.forEach(el => {
+        el.classList.toggle('tested', state.testedKeys.has(code));
+        el.classList.toggle('active', state.activeKeys.has(code));
+      });
+      updateCounters();
+    }
+
+    function updateCounters() {
+      const totalKeys = keyboardContainer.querySelectorAll('.keycap').length;
+      totalCountEl.textContent = totalKeys;
+      testedCountEl.textContent = state.testedKeys.size;
+    }
+
+    const LOCATION_NAMES = {
+      0: '0 (Standard)',
+      1: '1 (Left)',
+      2: '2 (Right)',
+      3: '3 (Numpad)',
+    };
+
+    function formatKeyDisplay(key) {
+      if (key === ' ') return 'Space (" ")';
+      return key;
+    }
+
+    function updateInspector(e, isDown) {
+      inspKey.textContent = formatKeyDisplay(e.key);
+      inspCode.textContent = e.code || 'Unidentified';
+      inspKeyCode.textContent = e.keyCode || e.which || '0';
+      inspLocation.textContent = LOCATION_NAMES[e.location] ?? e.location;
+
+      if (isDown) {
+        eventStateBadge.textContent = 'KEYDOWN — ACTIVE';
+        eventStateBadge.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-amber-500/20 text-amber-600 dark:text-amber-400';
+      } else {
+        eventStateBadge.textContent = 'KEYUP — RELEASED';
+        eventStateBadge.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400';
+      }
+    }
+
+    function pushHistory(label) {
+      state.history.unshift(label);
+      if (state.history.length > 14) state.history.pop();
+
+      keyHistoryTape.innerHTML = state.history
+        .map((item, idx) => {
+          const highlight = idx === 0
+            ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 font-bold'
+            : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300';
+          return `<span class="px-2 py-0.5 rounded border shrink-0 ${highlight}">${escapeHtml(item)}</span>`;
+        })
+        .join('');
+    }
+
+    /**
+     * Global Physical Keyboard Event Listeners
+     */
+    window.addEventListener('keydown', (e) => {
+      // Allow typing normally inside the scratchpad textarea while still capturing the key
+      const isTypingInBox = document.activeElement === captureBox;
+      if (!isTypingInBox) {
+        // Prevent browser shortcuts (Tab focus jump, Space scroll, Alt menu, F-keys)
+        e.preventDefault();
+      }
+
+      const code = e.code;
+      const isFirstPress = !e.repeat && !state.activeKeys.has(code);
+
+      if (code) {
+        state.activeKeys.add(code);
+        state.testedKeys.add(code);
+        syncKeyVisuals(code);
+      }
+
+      if (isFirstPress) {
+        const isMod = /^(Shift|Control|Alt|Meta|CapsLock|Tab|Enter|Backspace|Space)/.test(code);
+        audio.playPress(isMod);
+        pushHistory(code || e.key);
+      }
+
+      updateInspector(e, true);
+    });
+
+    window.addEventListener('keyup', (e) => {
+      const code = e.code;
+      if (code && state.activeKeys.has(code)) {
+        state.activeKeys.delete(code);
+        syncKeyVisuals(code);
+        audio.playRelease();
+      }
+      updateInspector(e, false);
+    });
+
+    // Clear stuck active states if browser window loses focus (e.g., Alt+Tab)
+    window.addEventListener('blur', () => {
+      state.activeKeys.forEach(code => {
+        state.activeKeys.delete(code);
+        syncKeyVisuals(code);
+      });
+      eventStateBadge.textContent = 'IDLE — WINDOW UNFOCUSED';
+      eventStateBadge.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400';
+    });
+
+    // Virtual On-Screen Key Click Support
+    function simulateVirtualPress(code, label) {
+      state.activeKeys.add(code);
+      state.testedKeys.add(code);
+      syncKeyVisuals(code);
+      audio.playPress(false);
+      pushHistory(code);
+      updateInspector({ key: label, code, keyCode: '—', location: 0 }, true);
+    }
+
+    function simulateVirtualRelease(code) {
+      if (state.activeKeys.has(code)) {
+        state.activeKeys.delete(code);
+        syncKeyVisuals(code);
+        audio.playRelease();
+        eventStateBadge.textContent = 'KEYUP — RELEASED';
+        eventStateBadge.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400';
+      }
+    }
+
+    /**
+     * UI Controls Event Handlers
+     */
+    layoutSelect.addEventListener('change', (e) => {
+      state.layout = e.target.value;
+      renderKeyboard();
+      layoutSelect.blur();
+    });
+
+    toggleFnExtBtn.addEventListener('click', () => {
+      state.showFnExt = !state.showFnExt;
+      fnExtIndicator.className = state.showFnExt
+        ? 'w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]'
+        : 'w-2 h-2 rounded-full bg-slate-400';
+      renderKeyboard();
+      toggleFnExtBtn.blur();
+    });
+
+    soundToggleBtn.addEventListener('click', () => {
+      audio.enabled = !audio.enabled;
+      soundIconOn.classList.toggle('hidden', !audio.enabled);
+      soundIconOff.classList.toggle('hidden', audio.enabled);
+      soundToggleBtn.classList.toggle('text-emerald-600', audio.enabled);
+      soundToggleBtn.classList.toggle('dark:text-emerald-400', audio.enabled);
+      soundToggleBtn.classList.toggle('text-slate-400', !audio.enabled);
+      soundLabel.textContent = audio.enabled ? 'Sound On' : 'Muted';
+      if (audio.enabled) audio.playPress(false);
+      soundToggleBtn.blur();
+    });
+
+    switchTypeSelect.addEventListener('change', (e) => {
+      audio.profile = e.target.value;
+      if (audio.enabled) audio.playPress(false);
+      switchTypeSelect.blur();
+    });
+
+    themeToggleBtn.addEventListener('click', () => {
+      const htmlEl = document.documentElement;
+      const isDark = htmlEl.classList.toggle('dark');
+      sunIcon.classList.toggle('hidden', !isDark);
+      moonIcon.classList.toggle('hidden', isDark);
+      themeToggleBtn.blur();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      state.testedKeys.clear();
+      state.activeKeys.clear();
+      state.history = [];
+      captureBox.value = '';
+      inspKey.textContent = '—';
+      inspCode.textContent = '—';
+      inspKeyCode.textContent = '—';
+      inspLocation.textContent = '—';
+      eventStateBadge.textContent = 'IDLE — PRESS ANY KEY';
+      eventStateBadge.className = 'px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400';
+      keyHistoryTape.innerHTML = '<span class="text-slate-400 dark:text-slate-600 italic text-[11px]">Keystrokes will appear here...</span>';
+      renderKeyboard();
+      resetBtn.blur();
+    });
+
+    // Initial render
+    renderKeyboard();
+  </script>
+</body>
+</html>
